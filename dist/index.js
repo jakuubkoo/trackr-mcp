@@ -7200,7 +7200,7 @@ var require_dist = __commonJS({
 });
 
 // index.js
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -16968,31 +16968,54 @@ var StdioServerTransport = class {
 // index.js
 var config_file = join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "trackr-mcp", "config.json");
 var public_headers = { Accept: "application/json", "User-Agent": "trackr-mcp/1.0" };
-var saved = {};
+var saved = { firms: {} };
 try {
-  saved = JSON.parse(readFileSync(config_file, "utf8"));
+  const file = JSON.parse(readFileSync(config_file, "utf8"));
+  saved = file.firms ? file : { firms: file.url ? { firm1: { url: file.url, api_key: file.api_key } } : {} };
 } catch {
 }
-var env_url = /\$\{/.test(process.env.TRACKR_URL ?? "") ? "" : process.env.TRACKR_URL;
-var env_key = /\$\{/.test(process.env.TRACKR_API_KEY ?? "") ? "" : process.env.TRACKR_API_KEY;
-var base_url = normalize_url(env_url || saved.url || "");
-var api_key = env_key || saved.api_key || "";
+var env_value = (name) => /\$\{/.test(process.env[name] ?? "") ? "" : process.env[name] ?? "";
+var env_firms = {};
+for (const [name, url, key] of [
+  ["firm1", "TRACKR_FIRM1_URL", "TRACKR_FIRM1_API_KEY"],
+  ["firm2", "TRACKR_FIRM2_URL", "TRACKR_FIRM2_API_KEY"],
+  ["firm1", "TRACKR_URL", "TRACKR_API_KEY"]
+]) {
+  if (env_value(url) && env_value(key) && !env_firms[name]) {
+    env_firms[name] = { url: normalize_url(env_value(url)), api_key: env_value(key) };
+  }
+}
+var all_firms = () => ({ ...saved.firms, ...env_firms });
+var active = saved.active in all_firms() ? saved.active : Object.keys(all_firms())[0] ?? "";
+var base_url = all_firms()[active]?.url ?? "";
+var api_key = all_firms()[active]?.api_key ?? "";
 var tools = /* @__PURE__ */ new Map();
 var spec_error = "";
+var firm_param = { type: "string", description: "Firm name, e.g. firm1 or firm2" };
 var auth_tools = [
   {
     name: "login",
-    description: "Sign in to ForexTrackr with an API key (trk_..., an admin creates it in Admin Settings > User Management > API Keys). The key and URL are checked and saved on this computer, so this is needed only once.",
+    description: "Sign in to a ForexTrackr firm with an API key (trk_..., an admin creates it in Admin Settings > User Management > API Keys). The key and URL are checked and saved on this computer under the firm name, which becomes the active firm.",
     inputSchema: {
       type: "object",
       properties: {
         api_key: { type: "string", description: "The API key, starting with trk_" },
-        url: { type: "string", description: "The ForexTrackr address, e.g. https://trackr.example.com (needed the first time)" }
+        url: { type: "string", description: "The ForexTrackr address, e.g. https://trackr.example.com (needed for a new firm)" },
+        firm: { ...firm_param, description: "Firm name to save it under (default: the active firm, or firm1)" }
       },
       required: ["api_key"]
     }
   },
-  { name: "logout", description: "Forget the saved ForexTrackr API key.", inputSchema: { type: "object", properties: {} } }
+  {
+    name: "switch_firm",
+    description: "List the ForexTrackr firms set up and which one is active, or switch every tool to another firm. Call it before answering about a firm other than the active one.",
+    inputSchema: { type: "object", properties: { firm: { ...firm_param, description: "Firm to switch to; leave out to list the firms" } } }
+  },
+  {
+    name: "logout",
+    description: "Forget the saved API key of a ForexTrackr firm.",
+    inputSchema: { type: "object", properties: { firm: { ...firm_param, description: "Firm to forget (default: the active firm)" } } }
+  }
 ];
 var hidden = /* @__PURE__ */ new Set([
   "dashboard_account_balances_list",
@@ -17214,7 +17237,11 @@ async function check_key(url, key) {
 }
 async function login(args) {
   const key = String(args.api_key ?? "").trim().replace(/^ApiKey\s+/, "");
-  const url = normalize_url(String(args.url || base_url));
+  const firm = String(args.firm || active || "firm1").trim();
+  if (env_firms[firm]) {
+    return result(`${firm} comes from the plugin settings: change it with /plugin configure trackr@forextrackr, or log in under another firm name.`, true);
+  }
+  const url = normalize_url(String(args.url || saved.firms[firm]?.url || ""));
   if (!/^https?:\/\//.test(url)) {
     return result("Pass the ForexTrackr address as url, e.g. https://trackr.example.com.", true);
   }
@@ -17225,28 +17252,68 @@ async function login(args) {
   if (error2) {
     return result(error2, true);
   }
-  const reload = url !== base_url || spec_error !== "";
-  base_url = url;
-  api_key = key;
-  mkdirSync(dirname(config_file), { recursive: true, mode: 448 });
-  writeFileSync(config_file, JSON.stringify({ url, api_key: key }), { mode: 384 });
+  saved.firms[firm] = { url, api_key: key };
+  return result(await use_firm(firm));
+}
+async function use_firm(firm) {
+  const settings = all_firms()[firm] ?? { url: "", api_key: "" };
+  const reload = settings.url !== base_url || spec_error !== "";
+  active = firm;
+  base_url = settings.url;
+  api_key = settings.api_key;
+  save();
   if (reload) {
     await load_tools();
     await server.sendToolListChanged();
   }
-  return result(`Signed in to ${url}. ${spec_error || `${tools.size} ForexTrackr tools are available.`} Tools outside the scopes ticked on this key answer 401.`);
+  return `Active firm: ${firm} (${base_url}). ${spec_error || `${tools.size} ForexTrackr tools are available.`} Tools outside the scopes ticked on this key answer 401.`;
 }
-var server = new Server({ name: "trackr", version: "1.2.0" }, { capabilities: { tools: { listChanged: true } } });
+function save() {
+  mkdirSync(dirname(config_file), { recursive: true, mode: 448 });
+  writeFileSync(config_file, JSON.stringify({ active, firms: saved.firms }), { mode: 384 });
+}
+async function switch_firm(args) {
+  const firms = all_firms();
+  const list = Object.entries(firms).map(([name, f]) => `${name === active ? "* " : "  "}${name}: ${f.url}`).join("\n");
+  if (!args.firm) {
+    return result(list ? `ForexTrackr firms (* = active):
+${list}` : "No firm set up yet: call login with the address and API key.");
+  }
+  if (!firms[args.firm]) {
+    return result(`Unknown firm ${args.firm}. Set up:
+${list || "(none)"}
+Add one with login.`, true);
+  }
+  return result(await use_firm(args.firm));
+}
+async function logout(args) {
+  const firm = String(args.firm || active);
+  if (env_firms[firm]) {
+    return result(`${firm} comes from the plugin settings: change or clear it with /plugin configure trackr@forextrackr.`, true);
+  }
+  if (!saved.firms[firm]) {
+    return result(`No saved firm ${firm}.`, true);
+  }
+  delete saved.firms[firm];
+  if (firm !== active) {
+    save();
+    return result(`Forgot the API key of ${firm}.`);
+  }
+  const next = Object.keys(all_firms())[0];
+  return result(`Forgot the API key of ${firm}. ${next ? await use_firm(next) : (save(), "No firm is set up any more.")}`);
+}
+var server = new Server({ name: "trackr", version: "1.3.0" }, { capabilities: { tools: { listChanged: true } } });
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [...auth_tools, ...[...tools.values()].map((t) => t.tool)] }));
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const args = request.params.arguments ?? {};
   if (request.params.name === "login") {
     return login(args);
   }
+  if (request.params.name === "switch_firm") {
+    return switch_firm(args);
+  }
   if (request.params.name === "logout") {
-    api_key = "";
-    rmSync(config_file, { force: true });
-    return result("Signed out; the saved API key is deleted.");
+    return logout(args);
   }
   const t = tools.get(request.params.name);
   if (!t) {

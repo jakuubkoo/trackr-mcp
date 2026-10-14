@@ -6,8 +6,10 @@
         "${CLAUDE_PLUGIN_ROOT}/dist/index.js"
       ],
       "env": {
-        "TRACKR_API_KEY": "${user_config.api_key}",
-        "TRACKR_URL": "${user_config.url}"
+        "TRACKR_FIRM1_URL": "${user_config.firm1_url}",
+        "TRACKR_FIRM1_API_KEY": "${user_config.firm1_api_key}",
+        "TRACKR_FIRM2_URL": "${user_config.firm2_url}",
+        "TRACKR_FIRM2_API_KEY": "${user_config.firm2_api_key}"
       }
     }
   }

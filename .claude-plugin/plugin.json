@@ -1,23 +1,34 @@
 {
   "name": "trackr",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "ForexTrackr read-only API tools: account lookup, current session, dashboard and business metrics.",
   "author": {
     "name": "Jakub Holas"
   },
   "userConfig": {
-    "api_key": {
+    "firm1_url": {
       "type": "string",
-      "title": "ForexTrackr API key",
-      "description": "Your trk_... key from a ForexTrackr admin (Admin Settings > User Management > API Keys).",
+      "title": "Firm 1: ForexTrackr URL",
+      "description": "The first firm's ForexTrackr address, e.g. https://trackr.example.com.",
+      "required": true
+    },
+    "firm1_api_key": {
+      "type": "string",
+      "title": "Firm 1: API key",
+      "description": "Your trk_... key from that firm's admin (Admin Settings > User Management > API Keys).",
       "sensitive": true,
       "required": true
     },
-    "url": {
+    "firm2_url": {
       "type": "string",
-      "title": "ForexTrackr URL",
-      "description": "Your ForexTrackr address, e.g. https://trackr.example.com.",
-      "required": true
+      "title": "Firm 2: ForexTrackr URL (optional)",
+      "description": "A second firm's address; leave empty if you have one firm."
+    },
+    "firm2_api_key": {
+      "type": "string",
+      "title": "Firm 2: API key (optional)",
+      "description": "Your trk_... key for the second firm.",
+      "sensitive": true
     }
   }
 }
