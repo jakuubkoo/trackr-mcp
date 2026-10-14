@@ -1,0 +1,23 @@
+{
+  "name": "trackr",
+  "version": "1.2.0",
+  "description": "ForexTrackr read-only API tools: account lookup, current session, dashboard and business metrics.",
+  "author": {
+    "name": "Jakub Holas"
+  },
+  "userConfig": {
+    "api_key": {
+      "type": "string",
+      "title": "ForexTrackr API key",
+      "description": "Your trk_... key from a ForexTrackr admin (Admin Settings > User Management > API Keys).",
+      "sensitive": true,
+      "required": true
+    },
+    "url": {
+      "type": "string",
+      "title": "ForexTrackr URL",
+      "description": "Your ForexTrackr address, e.g. https://trackr.example.com.",
+      "required": true
+    }
+  }
+}

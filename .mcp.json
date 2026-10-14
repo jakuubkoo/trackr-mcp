@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "trackr": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/dist/index.js"
+      ],
+      "env": {
+        "TRACKR_API_KEY": "${user_config.api_key}",
+        "TRACKR_URL": "${user_config.url}"
+      }
+    }
+  }
+}

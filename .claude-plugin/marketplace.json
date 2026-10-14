@@ -1,0 +1,14 @@
+{
+  "name": "forextrackr",
+  "description": "ForexTrackr plugins.",
+  "owner": {
+    "name": "Jakub Holas"
+  },
+  "plugins": [
+    {
+      "name": "trackr",
+      "source": "./",
+      "description": "ForexTrackr read-only API tools (MCP server)."
+    }
+  ]
+}
