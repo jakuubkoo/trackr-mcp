@@ -1,6 +1,6 @@
 {
   "name": "trackr",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "ForexTrackr read-only API tools: account lookup, current session, dashboard and business metrics.",
   "author": {
     "name": "Jakub Holas"

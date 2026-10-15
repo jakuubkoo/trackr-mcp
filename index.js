@@ -157,6 +157,9 @@ const overrides = {
             + 'by_symbol_trades), statistics_by_currency covers all trades. profit is the client\'s own P&L.',
         shape: (d) => activity(d),
     },
+    account_lookup_transactions: {
+        note: 'Firm-wide this is about 55 KB per day (about 3 MB for 60 days): ask for one day at a time, or pass email.',
+    },
     executive_active_traders_snapshot: { note: 'Counts accounts that are not archived, NOT accounts with an open position.' },
     management_active_accounts: { note: 'Counts accounts that are not archived, NOT accounts with an open position.', params: period_param,
         shape: (d) => omit(d, ['trend', 'periodChange']) },
@@ -483,7 +486,7 @@ async function logout(args)
     return result(`Forgot the API key of ${firm}. ${next ? await use_firm(next) : (save(), 'No firm is set up any more.')}`);
 }
 
-const server = new Server({ name: 'trackr', version: '1.3.0' }, { capabilities: { tools: { listChanged: true } } });
+const server = new Server({ name: 'trackr', version: '1.3.1' }, { capabilities: { tools: { listChanged: true } } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [...auth_tools, ...[...tools.values()].map((t) => t.tool)] }));
 

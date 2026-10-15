@@ -17091,6 +17091,9 @@ var overrides = {
     note: "trades holds the 50 newest trades; by_symbol sums the newest trades the API returns (at most 1000, count in by_symbol_trades), statistics_by_currency covers all trades. profit is the client's own P&L.",
     shape: (d) => activity(d)
   },
+  account_lookup_transactions: {
+    note: "Firm-wide this is about 55 KB per day (about 3 MB for 60 days): ask for one day at a time, or pass email."
+  },
   executive_active_traders_snapshot: { note: "Counts accounts that are not archived, NOT accounts with an open position." },
   management_active_accounts: {
     note: "Counts accounts that are not archived, NOT accounts with an open position.",
@@ -17302,7 +17305,7 @@ async function logout(args) {
   const next = Object.keys(all_firms())[0];
   return result(`Forgot the API key of ${firm}. ${next ? await use_firm(next) : (save(), "No firm is set up any more.")}`);
 }
-var server = new Server({ name: "trackr", version: "1.3.0" }, { capabilities: { tools: { listChanged: true } } });
+var server = new Server({ name: "trackr", version: "1.3.1" }, { capabilities: { tools: { listChanged: true } } });
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [...auth_tools, ...[...tools.values()].map((t) => t.tool)] }));
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const args = request.params.arguments ?? {};
